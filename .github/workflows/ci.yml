@@ -116,7 +116,7 @@ jobs:
           echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
       - name: Scan backend image with Trivy
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ghcr.io/${{ steps.meta.outputs.owner }}/adizz-backend:${{ steps.meta.outputs.sha }}
           format: table
@@ -125,7 +125,7 @@ jobs:
           severity: CRITICAL,HIGH
 
       - name: Scan frontend image with Trivy
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ghcr.io/${{ steps.meta.outputs.owner }}/adizz-frontend:${{ steps.meta.outputs.sha }}
           format: table
