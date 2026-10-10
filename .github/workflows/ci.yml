@@ -13,6 +13,10 @@ permissions:
   packages: write
 
 jobs:
+
+  # ============================================================
+  # 1. BACKEND TESTS
+  # ============================================================
   backend-tests:
     name: Backend Tests
     runs-on: ubuntu-latest
@@ -32,10 +36,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run pytest
+      - name: Run backend tests
         working-directory: backend
-        run: python -m pytest -v
+        run: |
+          pytest -v
 
+
+  # ============================================================
+  # 2. FRONTEND BUILD
+  # ============================================================
   frontend-build:
     name: Frontend Build
     runs-on: ubuntu-latest
@@ -53,15 +62,22 @@ jobs:
 
       - name: Install frontend dependencies
         working-directory: frontend
-        run: npm ci
+        run: |
+          npm ci
 
       - name: Build frontend
         working-directory: frontend
-        run: npm run build
+        run: |
+          npm run build
 
+
+  # ============================================================
+  # 3. BUILD AND PUBLISH DOCKER IMAGES
+  # ============================================================
   publish-images:
     name: Build and Publish Docker Images
     runs-on: ubuntu-latest
+
     needs:
       - backend-tests
       - frontend-build
@@ -84,15 +100,25 @@ jobs:
           echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
           echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
+      # ---------------- BACKEND IMAGE ----------------
+
       - name: Build and push backend image
         uses: docker/build-push-action@v6
         with:
           context: ./backend
           file: ./backend/Dockerfile
           push: true
+
+          # Disable BuildKit provenance/SBOM metadata
+          # because Trivy was detecting stale Python package
+          # versions from generated SBOM information.
           provenance: false
           sbom: false
-          tags: ghcr.io/${{ steps.meta.outputs.owner }}/adizz-backend:${{ steps.meta.outputs.sha }}
+
+          tags: |
+            ghcr.io/${{ steps.meta.outputs.owner }}/adizz-backend:${{ steps.meta.outputs.sha }}
+
+      # ---------------- FRONTEND IMAGE ----------------
 
       - name: Build and push frontend image
         uses: docker/build-push-action@v6
@@ -100,13 +126,23 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
+
+          # Disable BuildKit provenance/SBOM metadata
+          # for consistent Trivy scanning.
           provenance: false
           sbom: false
-          tags: ghcr.io/${{ steps.meta.outputs.owner }}/adizz-frontend:${{ steps.meta.outputs.sha }}
 
+          tags: |
+            ghcr.io/${{ steps.meta.outputs.owner }}/adizz-frontend:${{ steps.meta.outputs.sha }}
+
+
+  # ============================================================
+  # 4. TRIVY SECURITY SCAN
+  # ============================================================
   security-scan:
     name: Trivy Security Scan
     runs-on: ubuntu-latest
+
     needs:
       - publish-images
 
@@ -125,10 +161,13 @@ jobs:
           echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
           echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
+
+      # ---------------- BACKEND SECURITY SCAN ----------------
+
       - name: Scan backend image with Trivy
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          version: "v0.74.0"
+          version: "v0.75.0"
           image-ref: ghcr.io/${{ steps.meta.outputs.owner }}/adizz-backend:${{ steps.meta.outputs.sha }}
           format: table
           exit-code: "1"
@@ -136,10 +175,13 @@ jobs:
           severity: CRITICAL,HIGH
           vuln-type: os,library
 
+
+      # ---------------- FRONTEND SECURITY SCAN ----------------
+
       - name: Scan frontend image with Trivy
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          version: "v0.74.0"
+          version: "v0.75.0"
           image-ref: ghcr.io/${{ steps.meta.outputs.owner }}/adizz-frontend:${{ steps.meta.outputs.sha }}
           format: table
           exit-code: "1"
