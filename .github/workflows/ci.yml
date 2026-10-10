@@ -90,6 +90,8 @@ jobs:
           context: ./backend
           file: ./backend/Dockerfile
           push: true
+          provenance: false
+          sbom: false
           tags: |
             ghcr.io/${{ steps.meta.outputs.owner }}/adizz-backend:${{ steps.meta.outputs.sha }}
 
@@ -99,6 +101,8 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
+          provenance: false
+          sbom: false
           tags: |
             ghcr.io/${{ steps.meta.outputs.owner }}/adizz-frontend:${{ steps.meta.outputs.sha }}
 
