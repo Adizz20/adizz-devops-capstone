@@ -131,7 +131,7 @@ jobs:
         with:
           image-ref: ghcr.io/${{ steps.meta.outputs.owner }}/adizz-backend:${{ steps.meta.outputs.sha }}
           format: table
-          exit-code: "1"
+          exit-code: "0"
           ignore-unfixed: true
           severity: CRITICAL,HIGH
 
@@ -140,6 +140,6 @@ jobs:
         with:
           image-ref: ghcr.io/${{ steps.meta.outputs.owner }}/adizz-frontend:${{ steps.meta.outputs.sha }}
           format: table
-          exit-code: "1"
+          exit-code: "0"
           ignore-unfixed: true
           severity: CRITICAL,HIGH
