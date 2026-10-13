@@ -8,6 +8,6 @@ alembic==1.14.0
 prometheus-fastapi-instrumentator==8.1.0
 pytest==8.3.4
 httpx==0.28.1
-msgpack>=1.2.1
-setuptools>=78.1.1
-urllib3>=2.8.0
+msgpack==1.2.3
+setuptools==84.0.0
+urllib3==2.8.0
