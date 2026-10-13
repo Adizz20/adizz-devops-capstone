@@ -8,8 +8,8 @@ ENV PYTHONUNBUFFERED=1
 RUN useradd --create-home --shell /bin/bash appuser
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip uninstall --yes pip
 
 COPY app ./app
 COPY alembic ./alembic
