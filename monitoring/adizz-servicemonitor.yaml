@@ -1,0 +1,20 @@
+﻿apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: adizz-backend
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  namespaceSelector:
+    matchNames:
+      - adizz
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: adizz
+      app.kubernetes.io/instance: adizz
+      app.kubernetes.io/component: backend
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

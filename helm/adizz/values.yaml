@@ -1,0 +1,65 @@
+nameOverride: ""
+fullnameOverride: ""
+
+images:
+  backend:
+    repository: adizz-devops-capstone-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  frontend:
+    repository: adizz-devops-capstone-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+
+replicaCount:
+  backend: 2
+  frontend: 2
+
+service:
+  backend:
+    type: ClusterIP
+    port: 8000
+  frontend:
+    type: ClusterIP
+    port: 8080
+
+app:
+  name: Adizz
+  version: "1.0.0"
+
+postgres:
+  image: postgres:16-alpine
+  storage: 1Gi
+  database: adizz
+  username: adizz
+  # Local-development default only; override for shared/production deployments.
+  password: adizz_password
+  servicePort: 5432
+
+resources:
+  backend:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  frontend:
+    requests:
+      cpu: 50m
+      memory: 32Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
+  postgres:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+ingress:
+  enabled: false
+  className: nginx
+  host: adizz.local
