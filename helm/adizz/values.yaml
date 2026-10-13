@@ -60,6 +60,6 @@ resources:
       memory: 512Mi
 
 ingress:
-  enabled: false
+  enabled: true
   className: nginx
   host: adizz.local
