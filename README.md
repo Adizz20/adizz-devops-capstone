@@ -1,129 +1,215 @@
-# Adizz
+# Adizz — Travel & Booking Management System
 
-Adizz is a Travel & Booking Management System built as a DevOps capstone
-project.
+A DevOps capstone project that demonstrates a containerized travel-booking application, automated testing and image publishing, Kubernetes deployment, Infrastructure as Code, and application monitoring.
+
+**Repository:** [Adizz20/adizz-devops-capstone](https://github.com/Adizz20/adizz-devops-capstone)  
+**Branch:** `main`  
+**Frontend:** React + Vite  
+**Backend:** FastAPI  
+**Database:** PostgreSQL + Alembic  
+**Container registry:** GitHub Container Registry (GHCR)
+
+---
+
+## Project overview
+
+Adizz provides a simple travel-booking dashboard where a user can create and review bookings. The React frontend communicates with the FastAPI backend, which exposes health, booking, and Prometheus metrics endpoints. PostgreSQL persists application data.
+
+The project is packaged into Docker images and validated through GitHub Actions. Kubernetes manifests/Helm manage the app deployment, while Prometheus and Grafana provide monitoring. Terraform was used to provision the AWS network and EKS resources for infrastructure verification; those Terraform-managed AWS resources were destroyed after verification to avoid ongoing charges.
+
+## Application preview
+
+![Adizz frontend running in the browser](images/07-adizz-running-in-browser.png)
+
+*The application is open through the local Ingress hostname, and the header reports that the API is connected.*
+
+### Main application capabilities
+
+- Create a booking using customer name, destination, travel date, passenger count, and booking status.
+- View recent bookings and refresh the list.
+- Communicate with a FastAPI backend.
+- Expose health and Prometheus metrics endpoints for operational checks.
+
+---
+
+## Architecture
+
+```text
+Browser
+  |
+  v
+NGINX Ingress (adizz.local)
+  |                         |
+  | /                       | /api, /health, /metrics
+  v                         v
+React + Vite             FastAPI backend (2 replicas)
+                              |
+                              v
+                         PostgreSQL
+                              |
+                              v
+                       Prometheus scrape
+                              |
+                              v
+                         Grafana dashboard
+
+GitHub push
+    |
+    v
+GitHub Actions
+  ├── Backend pytest suite
+  ├── Frontend build
+  ├── Build and publish Docker images to GHCR
+  └── Trivy image security scans
+
+Terraform -> AWS VPC / public subnets / EKS (created, verified, then destroyed)
+```
 
 ## Technology stack
 
-- React and Vite
-- FastAPI and PostgreSQL
-- Docker and Docker Compose
-- GitHub Actions, GHCR, and Trivy
-- Kubernetes, Helm, Prometheus, and Grafana
-- Terraform and AWS EKS
+| Layer | Tools | Purpose |
+|---|---|---|
+| Frontend | React, Vite, NGINX | Responsive booking interface and static asset serving |
+| Backend | FastAPI, Uvicorn | REST API, health endpoint, metrics endpoint |
+| Data | PostgreSQL, SQLAlchemy/Alembic | Persistent booking data and schema migrations |
+| Testing | pytest | Automated backend/API tests |
+| Containers | Docker, Docker Compose | Reproducible images and local multi-service development |
+| CI/CD | GitHub Actions | Tests, frontend build, image publication, security gates |
+| Registry | GHCR | Versioned backend and frontend images |
+| Security | Trivy | Container image vulnerability scanning |
+| Orchestration | Kubernetes, Helm, NGINX Ingress | Deployments, replicas, services, and HTTP routing |
+| Observability | Prometheus, Grafana | Scraping application metrics and visualizing health/traffic |
+| Infrastructure | Terraform, AWS VPC, EKS | Infrastructure provisioning and verification |
 
-## Project structure
+---
 
-```text
-backend/            FastAPI backend, migrations, and tests
-frontend/           React/Vite frontend and nginx image
-terraform/          AWS VPC and EKS preparation
-helm/               Kubernetes Helm chart
-k8s/                Supporting Kubernetes manifests
-monitoring/         Prometheus and Grafana configuration
-troubleshooting/    Troubleshooting documentation
-.github/workflows/  CI/CD workflows
-```
+## Deployment and application evidence
 
-## Local development
+### Kubernetes workload
 
-Run backend tests from `backend`:
+![Kubernetes workload evidence](images/08-kubernetes-pods-services-helm.png)
 
-```powershell
-.\.venv\Scripts\python.exe -m pytest -v
-```
+This screenshot documents the local Kind cluster's Adizz namespace. The terminal output showed two backend pods, two frontend pods, and the PostgreSQL pod Running; the Ingress resource was also present.
 
-Install and build the frontend from `frontend`:
+### API endpoint verification
 
-```powershell
-npm ci
-npm run build
-```
+![API endpoint verification](images/09-api-endpoint-verification.png)
 
-Run the complete local stack with Docker Compose:
+The screenshot records terminal checks performed against the application endpoints. The backend exposes `/health`, booking API routes under `/api`, and `/metrics`.
 
-```powershell
-docker compose up --build
-```
+---
 
-The Compose frontend is available at `http://localhost:3000`, the backend at
-`http://localhost:8000`, and PostgreSQL at `localhost:5432`.
+## CI/CD and container security
 
-## Local Kind and Helm deployment
+### Successful GitHub Actions workflow
 
-The local cluster is named `aditya`. Build and load the images, render the
-chart, then upgrade the release:
+The workflow is configured to run backend tests, build the frontend, build and publish backend/frontend container images to GHCR, and run Trivy scans.
 
-```powershell
-docker build -t adizz-devops-capstone-backend:latest .\backend
-docker build -t adizz-devops-capstone-frontend:latest .\frontend
-kind load docker-image adizz-devops-capstone-backend:latest --name aditya
-kind load docker-image adizz-devops-capstone-frontend:latest --name aditya
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.13.2/deploy/static/provider/kind/deploy.yaml
-helm template adizz .\helm\adizz
-helm upgrade --install adizz .\helm\adizz --namespace adizz --create-namespace --wait
-```
+- [Open GitHub Actions runs](https://github.com/Adizz20/adizz-devops-capstone/actions)
+- [Open the GitHub account's package list](https://github.com/Adizz20?tab=packages)
 
-The chart runs two backend replicas, two frontend replicas, PostgreSQL with a
-persistent volume, and an nginx Ingress for the `adizz.local` host. The
-Ingress preserves the `/api` prefix, so `/api/bookings` reaches the FastAPI
-route unchanged.
+The successful run captured during verification displayed green checks for **Backend Tests**, **Frontend Build**, **Build and Publish Docker Images**, and **Trivy Security Scan**.
 
-The current Kind cluster has no host port mapping for HTTP or HTTPS. Test the
-Ingress without changing or recreating the cluster by forwarding its service:
+### Container packages
 
-```powershell
-kubectl -n ingress-nginx port-forward svc/ingress-nginx-controller 18080:80
-curl.exe -H "Host: adizz.local" http://127.0.0.1:18080/
-curl.exe -H "Host: adizz.local" http://127.0.0.1:18080/health
-curl.exe -H "Host: adizz.local" http://127.0.0.1:18080/api/bookings
-```
+The project publishes two packages:
 
-## Monitoring
+- `adizz-backend`
+- `adizz-frontend`
 
-Prometheus scrapes both backend replicas through the `adizz-backend`
-ServiceMonitor. Access the local UIs with:
+The images are tagged by the workflow so that builds can be associated with a source revision.
 
-```powershell
-kubectl -n monitoring port-forward svc/monitoring-kube-prometheus-prometheus 9090:9090
-kubectl -n monitoring port-forward svc/monitoring-grafana 3002:80
-```
+### Trivy scanning
 
-The provisioned Grafana dashboard is `Adizz Application Monitoring`. It
-contains request totals, request rate, latency, and healthy backend replica
-queries.
+Trivy runs against both published images. The workflow is configured to fail for HIGH and CRITICAL findings according to the project's security gate. The screenshot of the successful workflow is evidence that the configured scan job completed successfully; it should not be interpreted as proof that every possible vulnerability in every dependency is absent.
 
-## Terraform AWS checkpoint
+---
 
-The `terraform` directory prepares an AWS VPC with two public subnets across
-availability zones, an internet gateway, an EKS control plane, and an EKS
-managed node group. It does not provision anything by itself.
+## Infrastructure as Code: Terraform and AWS
 
-Prerequisites are Terraform, AWS CLI credentials configured for the intended
-account, and permission to create VPC, IAM, EKS, EC2, and related resources.
-Review the example variables, then validate locally:
+### Terraform CLI evidence
 
-```powershell
-Copy-Item .\terraform\terraform.tfvars.example .\terraform\terraform.tfvars
-terraform -chdir=terraform init
-terraform -chdir=terraform fmt -check
-terraform -chdir=terraform validate
-terraform -chdir=terraform plan -var-file=terraform.tfvars
-```
+![Terraform CLI evidence](images/05-terraform-cli-output.png)
 
-Do not run `terraform apply` until the plan, account, region, and budget have
-been explicitly reviewed. EKS control planes, EC2 nodes, load balancers, public
-IPv4 addresses, storage, and any NAT gateway are chargeable AWS resources.
-This configuration intentionally uses public subnets and no NAT gateway to
-avoid an automatic NAT gateway charge; worker nodes still incur EC2 costs.
+This terminal screenshot is retained as evidence of the Terraform/AWS command workflow.
 
-After an approved deployment, configure `kubectl` with
-`aws eks update-kubeconfig`, push or reference the images in GHCR, and deploy
-the Helm chart to the EKS context. Cleanup is:
+### EKS and AWS CLI evidence
+
+![EKS and AWS CLI evidence](images/06-terraform-eks-cli-evidence.png)
+
+This screenshot provides additional terminal evidence from the AWS/EKS workflow. During verification, the EKS cluster and its two worker nodes were checked using the CLI.
+
+**Cost note:** The Terraform-managed AWS resources were destroyed after verification. These screenshots are historical evidence of provisioning and checking the infrastructure, not a claim that the EKS cluster is still running.
+
+---
+
+## Monitoring and observability
+
+### Prometheus targets
+
+![Prometheus targets showing UP](images/10-prometheus-targets-up.png)
+
+Prometheus target health showed the Adizz backend scrape targets in the **UP** state. The backend metrics endpoint is `/metrics`, and the ServiceMonitor is configured to scrape the backend in the `adizz` namespace.
+
+### Grafana dashboard
+
+![Grafana Adizz Application Monitoring dashboard](images/11-grafana-application-dashboard.png)
+
+The dashboard includes panels for:
+
+- **Total API Requests** — cumulative request counter.
+- **API Request Rate by Endpoint** — traffic rate grouped by endpoint.
+- **API Latency (ms)** — observed API request latency.
+- **Healthy Backend Replicas** — number of healthy backend replicas.
+
+These panels demonstrate how the application can be observed while it is running in the local Kind environment.
+
+---
+
+## Run locally
+
+Requirements: Docker Desktop with Kubernetes/Kind available, Git, and optionally Python/Node.js if running services outside containers.
+
+From the repository root:
 
 ```powershell
-terraform -chdir=terraform destroy -var-file=terraform.tfvars
+# Start the application and PostgreSQL services
+docker compose up --build -d
+
+# Check running containers
+docker compose ps
+
+# Run backend tests (activate the project's virtual environment first if used)
+pytest -v
 ```
 
-Then verify that the EKS cluster, node group, load balancers, volumes, and
-other chargeable resources are gone.
+The Compose configuration maps the frontend to `http://localhost:3000` and the backend to `http://localhost:8000`. Check the repository's current `docker-compose.yml` and `.env.example` for exact local configuration before starting services.
+
+For the Kubernetes workflow, use the Helm values/manifests and monitoring configuration committed in the repository. The captured browser screenshot used the local hostname `adizz.local`; local Ingress and port-forward setup may be needed depending on the machine.
+
+## Useful links
+
+- **Source repository:** https://github.com/Adizz20/adizz-devops-capstone
+- **GitHub Actions:** https://github.com/Adizz20/adizz-devops-capstone/actions
+- **GHCR packages:** https://github.com/Adizz20?tab=packages
+
+## Submission evidence index
+
+| Rubric area | Evidence included | Notes |
+|---|---|---|
+| Application | `images/07-adizz-running-in-browser.png` | Browser screenshot with API Connected |
+| Kubernetes / Helm / Ingress | `images/08-kubernetes-pods-services-helm.png` | Workload and Ingress terminal evidence |
+| API | `images/09-api-endpoint-verification.png` | Endpoint verification terminal screenshot |
+| Terraform / AWS | `images/05-terraform-cli-output.png`, `images/06-terraform-eks-cli-evidence.png` | Historical infrastructure workflow evidence |
+| Prometheus | `images/10-prometheus-targets-up.png` | Backend targets UP |
+| Grafana | `images/11-grafana-application-dashboard.png` | Application monitoring dashboard |
+| CI/CD and Trivy | GitHub Actions link above | Open the successful workflow run to show the job checks |
+| Live demo | To be performed | Make a small meaningful change, push it, show the workflow passing, and verify the application |
+
+## Final notes
+
+- The screenshots in `images/` are embedded above using relative paths. Keep the `images` folder beside this README when committing it.
+- AWS evidence is historical because the Terraform-managed resources were destroyed after verification.
+- Kubernetes, Prometheus, and Grafana evidence represents the local Kind environment.
+- Before submission, confirm the repository is public, `.env` and credentials are not committed, and the current GitHub Actions run is green.
+- The live demo remains a separate step: push a meaningful code change, show CI/CD progress, and verify the updated application.
