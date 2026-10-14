@@ -36,7 +36,7 @@ variable "public_subnet_cidrs" {
 variable "kubernetes_version" {
   description = "Kubernetes version for EKS."
   type        = string
-  default     = "1.33"
+  default     = "1.35"
 }
 
 variable "node_instance_types" {
