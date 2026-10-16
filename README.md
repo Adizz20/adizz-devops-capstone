@@ -213,3 +213,7 @@ For the Kubernetes workflow, use the Helm values/manifests and monitoring config
 - Kubernetes, Prometheus, and Grafana evidence represents the local Kind environment.
 - Before submission, confirm the repository is public, `.env` and credentials are not committed, and the current GitHub Actions run is green.
 - The live demo remains a separate step: push a meaningful code change, show CI/CD progress, and verify the updated application.
+
+## Project Demo
+
+[Watch or download the Adizz DevOps Capstone recording](https://github.com/Adizz20/adizz-devops-capstone/releases/tag/v1.0.0)
